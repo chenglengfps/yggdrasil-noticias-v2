@@ -1,0 +1,41 @@
+name: Yggdrasil Notícias
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */2 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Executar robô
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.7-flash
+          MAX_POSTS_PER_RUN: "1"
+        run: python bot.py
+
+      - name: Salvar status e histórico
+        run: |
+          git config user.name "yggdrasil-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/publicados.json data/status.json data/fontes.json
+          git diff --cached --quiet || git commit -m "Atualiza status do bot"
+          git push
