@@ -1,0 +1,32 @@
+[
+  {
+    "id": "crunchyroll",
+    "name": "Crunchyroll",
+    "url": "https://feeds.feedburner.com/crunchyroll/animenews",
+    "active": true
+  },
+  {
+    "id": "jbox",
+    "name": "JBox",
+    "url": "https://www.jbox.com.br/feed/",
+    "active": true
+  },
+  {
+    "id": "ovicio",
+    "name": "O Vício",
+    "url": "https://ovicio.com.br/category/anime/feed/",
+    "active": true
+  },
+  {
+    "id": "animeunited",
+    "name": "Anime United",
+    "url": "https://www.animeunited.com.br/feed/",
+    "active": true
+  },
+  {
+    "id": "omelete",
+    "name": "Omelete",
+    "url": "https://www.omelete.com.br/rss",
+    "active": true
+  }
+]
