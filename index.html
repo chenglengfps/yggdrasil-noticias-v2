@@ -101,11 +101,13 @@
     button:hover { background: var(--accent-purple); }
     .btn-add { background: var(--success-color); margin-top: 10px; width: 100%; }
     .btn-add:hover { background: #27ae60; }
+    .btn-reset { background: #d35400; margin-top: 8px; width: 100%; }
+    .btn-reset:hover { background: #e67e22; }
     .btn-telegram { background: #0088cc; flex: 1 1 100%; font-weight: bold; font-size: 0.95rem; }
     .btn-telegram:hover { background: #00a8ff; }
     .btn-ai { background: #6e40c9; }
     .btn-ai:hover { background: #8957e5; }
-    .btn-danger { background: #c0392b; margin-top: 12px; width: 100%; }
+    .btn-danger { background: #c0392b; margin-top: 8px; width: 100%; }
     .btn-danger:hover { background: #e74c3c; }
 
     /* TABELA DE PORTAIS */
@@ -164,7 +166,7 @@
       <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
 
       <label style="font-weight: bold; color: var(--accent-color);">➕ Cadastrar Novo Portal RSS:</label>
-      <input type="text" id="novoNomePortal" placeholder="Nome do Portal (ex: AnimesX)">
+      <input type="text" id="novoNomePortal" placeholder="Nome do Portal (ex: Crunchyroll)">
       <input type="text" id="novaUrlPortal" placeholder="URL do Feed RSS (https://...)">
       <label>Modo de Postagem:</label>
       <select id="novoModoPortal">
@@ -173,6 +175,7 @@
       </select>
       <button class="btn-add" onclick="adicionarNovoPortal()">➕ Adicionar Portal</button>
 
+      <button class="btn-reset" onclick="restaurarPortaisPadrao()">🔄 Restaurar Portais Padrão</button>
       <button class="btn-danger" onclick="limparHistoricoPostados()">🗑️ Limpar Histórico de Postados</button>
     </div>
 
@@ -223,14 +226,14 @@
   </div>
 
   <script>
+    // PORTAIS PADRÃO PRÉ-CADASTRAOS
     const FONTES_PADRAO = [
       { id: 'jbox', nome: 'JBox', url: 'https://www.jbox.com.br/feed/', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
       { id: 'ovicio', nome: 'O Vício', url: 'https://ovicio.com.br/category/animes/feed/', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
       { id: 'animeunited', nome: 'Anime United', url: 'https://www.animeunited.com.br/feed/', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
+      { id: 'crunchyroll', nome: 'Crunchyroll Notícias', url: 'https://www.crunchyroll.com/news/rss', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
       { id: 'ign', nome: 'IGN Brasil', url: 'https://br.ign.com/feed.xml', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
-      { id: 'flowgames', nome: 'Flow Games', url: 'https://flowgames.gg/feed/', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
-      { id: 'legiaodosherois', nome: 'Legião dos Heróis', url: 'https://www.legiaodosherois.com.br/feed', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
-      { id: 'techtudo', nome: 'TechTudo Games', url: 'https://techtudo.com.br/rss/techtudo/jogos/', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' }
+      { id: 'legiaodosherois', nome: 'Legião dos Heróis', url: 'https://www.legiaodosherois.com.br/feed', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' }
     ];
 
     let fontes = [];
@@ -241,10 +244,16 @@
     window.onload = () => {
       try {
         const fontesSalvas = localStorage.getItem('yg_fontes_custom');
-        fontes = fontesSalvas ? JSON.parse(fontesSalvas) : FONTES_PADRAO;
+        
+        // Se não houver salvas ou se o array estiver vazio, usa as padrão
+        if (fontesSalvas) {
+          const parsed = JSON.parse(fontesSalvas);
+          fontes = (parsed && parsed.length > 0) ? parsed : FONTES_PADRAO;
+        } else {
+          fontes = FONTES_PADRAO;
+        }
 
-        atualizarSelectPortais();
-        renderizarTabelaPortais();
+        salvarFontesLocal();
 
         document.getElementById('botToken').value = localStorage.getItem('yg_bot_token') || "";
         document.getElementById('chatId').value = localStorage.getItem('yg_chat_id') || "@YggdrasilNoticias";
@@ -253,6 +262,8 @@
         carregarFonteAtual();
       } catch (e) {
         console.error("Erro na inicialização:", e);
+        fontes = FONTES_PADRAO;
+        salvarFontesLocal();
       }
     };
 
@@ -266,6 +277,15 @@
       localStorage.setItem('yg_fontes_custom', JSON.stringify(fontes));
       atualizarSelectPortais();
       renderizarTabelaPortais();
+    }
+
+    function restaurarPortaisPadrao() {
+      if (confirm("Isso vai redefinir a lista de portais para a lista original. Continuar?")) {
+        fontes = FONTES_PADRAO;
+        salvarFontesLocal();
+        carregarFonteAtual();
+        alert("Portais restaurados com sucesso!");
+      }
     }
 
     function atualizarSelectPortais() {
@@ -508,20 +528,8 @@
         }
       }
 
-      // 2. Fallback: Enviar apenas texto com prévia habilitada caso a foto falhe
+      // 2. Fallback: Enviar apenas texto
       if (!sucesso) {
         try {
           const endpoint = `https://api.telegram.org/bot${botToken}/sendMessage`;
-          const payload = { chat_id: chatId, text: texto, parse_mode: 'HTML', disable_web_page_preview: false };
-
-          const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          const data = await res.json();
-          if (data.ok) sucesso = true;
-          else throw new Error(data.description || "Erro no Telegram");
-        } catch (err) {
-          document.getElementById('statusGlobal').innerText = "❌ Erro ao enviar: " + err.message;
-          alert("Erro ao publicar: " + err.messag
+   
