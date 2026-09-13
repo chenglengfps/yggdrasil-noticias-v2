@@ -36,7 +36,7 @@ def salvar_historico(historico):
 
 def enviar_telegram(texto):
     if not BOT_TOKEN:
-        print("❌ BOT_TOKEN não encontrado.")
+        print("❌ BOT_TOKEN não encontrado nas variáveis de ambiente.")
         return False
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = json.dumps({
@@ -77,11 +77,21 @@ def processar_feeds():
                     if link and link not in historico:
                         tag_fonte = "#" + portal["nome"].replace(" ", "")
                         msg = (
-                            f"🗞️ <b>PORTAL YGGDRASIL | {portal['nome']}</b>\n\n"
-                            f"🔥 <b>{titulo}</b>\n\n"
-                            f"📖 Quer saber mais? <a href='{link}'>Leia a matéria completa no site!</a>\n\n"
-                            f"💡 <i>Créditos ao portal {portal['nome']}</i>\n───\n"
-                            f"🌳 Faça parte do nosso canal principal: @YggdrasilAnimes\n\n"
+                            f"🗞️ <b>PORTAL YGGDRASIL | {portal['nome']}</b>
+
+"
+                            f"🔥 <b>{titulo}</b>
+
+"
+                            f"📖 Quer saber mais? <a href='{link}'>Leia a matéria completa no site!</a>
+
+"
+                            f"💡 <i>Créditos ao portal {portal['nome']}</i>
+───
+"
+                            f"🌳 Faça parte do nosso canal principal: @YggdrasilAnimes
+
+"
                             f"#YggdrasilNoticias #YggdrasilAnimes #Geek #Otaku {tag_fonte}"
                         )
 
