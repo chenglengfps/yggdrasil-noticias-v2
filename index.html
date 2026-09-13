@@ -101,7 +101,7 @@
     button:hover { background: var(--accent-purple); }
     .btn-add { background: var(--success-color); margin-top: 10px; width: 100%; }
     .btn-add:hover { background: #27ae60; }
-    .btn-reset { background: #d35400; margin-top: 8px; width: 100%; }
+    .btn-reset { background: #d35400; margin-top: 8px; width: 100%; font-weight: bold; }
     .btn-reset:hover { background: #e67e22; }
     .btn-telegram { background: #0088cc; flex: 1 1 100%; font-weight: bold; font-size: 0.95rem; }
     .btn-telegram:hover { background: #00a8ff; }
@@ -175,7 +175,7 @@
       </select>
       <button class="btn-add" onclick="adicionarNovoPortal()">➕ Adicionar Portal</button>
 
-      <button class="btn-reset" onclick="restaurarPortaisPadrao()">🔄 Restaurar Portais Padrão</button>
+      <button class="btn-reset" onclick="acaoRestaurarPadroes()">🔄 Restaurar Portais Padrão</button>
       <button class="btn-danger" onclick="limparHistoricoPostados()">🗑️ Limpar Histórico de Postados</button>
     </div>
 
@@ -226,8 +226,7 @@
   </div>
 
   <script>
-    // PORTAIS PADRÃO PRÉ-CADASTRAOS
-    const FONTES_PADRAO = [
+    const listaInicialPortais = [
       { id: 'jbox', nome: 'JBox', url: 'https://www.jbox.com.br/feed/', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
       { id: 'ovicio', nome: 'O Vício', url: 'https://ovicio.com.br/category/animes/feed/', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
       { id: 'animeunited', nome: 'Anime United', url: 'https://www.animeunited.com.br/feed/', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
@@ -244,13 +243,11 @@
     window.onload = () => {
       try {
         const fontesSalvas = localStorage.getItem('yg_fontes_custom');
-        
-        // Se não houver salvas ou se o array estiver vazio, usa as padrão
         if (fontesSalvas) {
           const parsed = JSON.parse(fontesSalvas);
-          fontes = (parsed && parsed.length > 0) ? parsed : FONTES_PADRAO;
+          fontes = (parsed && parsed.length > 0) ? parsed : listaInicialPortais;
         } else {
-          fontes = FONTES_PADRAO;
+          fontes = Array.from(listaInicialPortais);
         }
 
         salvarFontesLocal();
@@ -262,7 +259,7 @@
         carregarFonteAtual();
       } catch (e) {
         console.error("Erro na inicialização:", e);
-        fontes = FONTES_PADRAO;
+        fontes = Array.from(listaInicialPortais);
         salvarFontesLocal();
       }
     };
@@ -279,9 +276,9 @@
       renderizarTabelaPortais();
     }
 
-    function restaurarPortaisPadrao() {
-      if (confirm("Isso vai redefinir a lista de portais para a lista original. Continuar?")) {
-        fontes = FONTES_PADRAO;
+    function acaoRestaurarPadroes() {
+      if (confirm("Deseja restaurar a lista padrão de portais?")) {
+        fontes = JSON.parse(JSON.stringify(listaInicialPortais));
         salvarFontesLocal();
         carregarFonteAtual();
         alert("Portais restaurados com sucesso!");
@@ -532,4 +529,4 @@
       if (!sucesso) {
         try {
           const endpoint = `https://api.telegram.org/bot${botToken}/sendMessage`;
-   
+          const payload = { chat_id: chatId, text: text
