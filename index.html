@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Yggdrasil Notícias - Painel Pro</title>
+  <title>Yggdrasil Notícias - Painel Unificado</title>
   <style>
     :root {
       --bg-color: #0b0e14;
@@ -32,50 +32,29 @@
       letter-spacing: 1px;
       text-align: center;
     }
+    h3 {
+      margin-top: 0;
+      color: var(--accent-color);
+      font-size: 1.1rem;
+    }
     .main-container {
       width: 100%;
       max-width: 600px;
-    }
-    
-    /* SISTEMA DE ABAS */
-    .tab-buttons {
       display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
+      flex-direction: column;
+      gap: 20px;
     }
-    .tab-btn {
-      flex: 1;
-      padding: 12px;
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      color: #fff;
-      font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .tab-btn.active {
-      background: var(--accent-purple);
-      border-color: var(--accent-color);
-    }
-    .tab-content {
-      display: none;
-    }
-    .tab-content.active {
-      display: block;
-    }
-
-    .config-panel {
+    .section-block {
       background: var(--card-bg);
       border: 1px solid var(--border-color);
       border-radius: 10px;
       padding: 15px;
-      margin-bottom: 20px;
     }
     label {
       font-size: 0.85rem;
       color: #a0aec0;
       display: block;
-      margin-top: 8px;
+      margin-top: 10px;
     }
     input, select, textarea {
       width: 100%;
@@ -87,46 +66,26 @@
       border-radius: 5px;
       box-sizing: border-box;
     }
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 15px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .card-header {
-      font-weight: bold;
-      color: var(--accent-color);
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .card-title {
-      font-size: 1.1rem;
-      color: #fff;
-      font-weight: bold;
-    }
     .img-preview {
       width: 100%;
       max-height: 250px;
       object-fit: cover;
       border-radius: 8px;
       border: 1px solid var(--border-color);
+      margin-top: 10px;
       display: none;
     }
     textarea {
-      height: 180px;
+      height: 160px;
       resize: vertical;
       font-size: 0.9rem;
+      margin-top: 10px;
     }
     .btn-group {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      margin-top: 12px;
     }
     button {
       background: var(--border-color);
@@ -140,20 +99,23 @@
       transition: background 0.2s;
     }
     button:hover { background: var(--accent-purple); }
-    .btn-add { background: var(--success-color); margin-top: 8px; width: 100%; }
+    .btn-add { background: var(--success-color); margin-top: 10px; width: 100%; }
     .btn-add:hover { background: #27ae60; }
-    .btn-telegram { background: #0088cc; flex: 1 1 100%; font-weight: bold; }
+    .btn-telegram { background: #0088cc; flex: 1 1 100%; font-weight: bold; font-size: 0.95rem; }
     .btn-telegram:hover { background: #00a8ff; }
     .btn-ai { background: #6e40c9; }
     .btn-ai:hover { background: #8957e5; }
-    .btn-danger { background: #c0392b; margin-top: 10px; width: 100%; }
+    .btn-danger { background: #c0392b; margin-top: 12px; width: 100%; }
     .btn-danger:hover { background: #e74c3c; }
 
     /* TABELA DE PORTAIS */
+    .table-responsive {
+      overflow-x: auto;
+      margin-top: 10px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
       font-size: 0.8rem;
     }
     th, td {
@@ -180,72 +142,44 @@
   <div class="main-container">
     <h1>🌳 Yggdrasil Notícias</h1>
 
-    <!-- BOTOES DAS ABAS -->
-    <div class="tab-buttons">
-      <button class="tab-btn active" onclick="mudarAba('postador')">📱 Postador</button>
-      <button class="tab-btn" onclick="mudarAba('portais')">🌐 Portais & Status</button>
+    <!-- BLOCO 1: CONFIGURAÇÕES E GERENCIADOR DE PORTAIS -->
+    <div class="section-block">
+      <h3>⚙️ Configurações & Portais</h3>
+
+      <label for="botToken">Token do Bot Telegram:</label>
+      <input type="password" id="botToken" placeholder="Insira seu Bot Token" onchange="salvarConfiguracoes()">
+
+      <label for="chatId">ID ou Username do Canal Telegram:</label>
+      <input type="text" id="chatId" value="@YggdrasilNoticias" onchange="salvarConfiguracoes()">
+
+      <label for="geminiKey">API Key do Gemini (Para Resumo IA):</label>
+      <input type="password" id="geminiKey" placeholder="Insira sua chave API do Gemini" onchange="salvarConfiguracoes()">
+
+      <label for="selectFonte">Selecionar Portal Atual:</label>
+      <div class="flex-row">
+        <select id="selectFonte" onchange="trocarPortal()"></select>
+        <button onclick="removerPortalAtual()" style="flex: 0 0 40px; background: #c0392b;" title="Remover Portal">🗑️</button>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
+
+      <label style="font-weight: bold; color: var(--accent-color);">➕ Cadastrar Novo Portal RSS:</label>
+      <input type="text" id="novoNomePortal" placeholder="Nome do Portal (ex: AnimesX)">
+      <input type="text" id="novaUrlPortal" placeholder="URL do Feed RSS (https://...)">
+      <label>Modo de Postagem:</label>
+      <select id="novoModoPortal">
+        <option value="Manual">Manual</option>
+        <option value="Automático">Automático (Futuro Bot)</option>
+      </select>
+      <button class="btn-add" onclick="adicionarNovoPortal()">➕ Adicionar Portal</button>
+
+      <button class="btn-danger" onclick="limparHistoricoPostados()">🗑️ Limpar Histórico de Postados</button>
     </div>
 
-    <!-- ABA 1: POSTADOR -->
-    <div id="aba-postador" class="tab-content active">
-      <div class="config-panel">
-        <label for="botToken">Token do Bot Telegram:</label>
-        <input type="password" id="botToken" placeholder="Token do Bot">
-
-        <label for="chatId">ID / Username do Canal:</label>
-        <input type="text" id="chatId" value="@YggdrasilNoticias">
-
-        <label for="geminiKey">API Key do Gemini:</label>
-        <input type="password" id="geminiKey" placeholder="Chave do Gemini">
-
-        <label for="selectFonte">Selecione o Portal de Notícias:</label>
-        <div class="flex-row">
-          <select id="selectFonte" onchange="trocarPortal()"></select>
-          <button onclick="removerPortalAtual()" style="flex: 0 0 40px; background: #c0392b;">🗑️</button>
-        </div>
-
-        <button class="btn-danger" onclick="limparHistoricoPostados()">🗑️ Limpar Histórico de Postados</button>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span id="nomePortal">Portal</span>
-          <small id="indexNoticia">-</small>
-        </div>
-
-        <div class="card-title" id="tituloNoticia">Clique em "Carregar Fonte" para começar.</div>
-
-        <img id="imagemNoticia" class="img-preview" alt="Imagem da Notícia">
-
-        <textarea id="textoPost" placeholder="O texto da notícia aparecerá aqui..."></textarea>
-
-        <div class="btn-group">
-          <button onclick="carregarFonteAtual()">🔄 Recarregar Fonte</button>
-          <button onclick="trocarNoticia(1)">⏬ Notícia Anterior</button>
-          <button onclick="trocarNoticia(-1)">⏫ Notícia Seguinte</button>
-          <button onclick="proximoPortal()">🌐 Ir para Outro Portal</button>
-          <button class="btn-ai" onclick="resumirComGemini()">🤖 Resumir com IA</button>
-          <button class="btn-telegram" onclick="enviarDiretoTelegram()">🚀 Postar Direto no Canal</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ABA 2: PORTAIS E STATUS -->
-    <div id="aba-portais" class="tab-content">
-      <div class="config-panel">
-        <h3 style="margin-top:0; color:var(--accent-color);">➕ Cadastrar Novo Portal RSS</h3>
-        <input type="text" id="novoNomePortal" placeholder="Nome do Portal (ex: AnimesX)">
-        <input type="text" id="novaUrlPortal" placeholder="URL do Feed RSS (https://...)">
-        <label>Modo de Postagem:</label>
-        <select id="novoModoPortal">
-          <option value="Manual">Manual</option>
-          <option value="Automático">Automático (Futuro Bot)</option>
-        </select>
-        <button class="btn-add" onclick="adicionarNovoPortal()">➕ Adicionar à Lista</button>
-      </div>
-
-      <div class="card">
-        <h3 style="margin:0; color:var(--accent-color);">📋 Status dos Portais</h3>
+    <!-- BLOCO 2: TABELA DE STATUS DOS PORTAIS -->
+    <div class="section-block">
+      <h3>📋 Status de Todos os Portais</h3>
+      <div class="table-responsive">
         <table>
           <thead>
             <tr>
@@ -256,9 +190,32 @@
             </tr>
           </thead>
           <tbody id="tabelaPortaisBody">
-            <!-- Gerado via JS -->
+            <!-- Preenchido via JS -->
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- BLOCO 3: PRÉVIA E POSTADOR DE NOTÍCIAS -->
+    <div class="section-block">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+        <span id="nomePortal" style="font-weight: bold; color: var(--accent-color);">Portal</span>
+        <small id="indexNoticia">-</small>
+      </div>
+
+      <h4 id="tituloNoticia" style="margin: 12px 0 8px 0; color: #fff;">Clique em "Recarregar Fonte" para buscar dados.</h4>
+
+      <img id="imagemNoticia" class="img-preview" alt="Imagem da Notícia">
+
+      <textarea id="textoPost" placeholder="O texto da notícia formatado para o Telegram aparecerá aqui..."></textarea>
+
+      <div class="btn-group">
+        <button onclick="carregarFonteAtual()">🔄 Recarregar Fonte</button>
+        <button onclick="trocarNoticia(1)">⏬ Notícia Anterior</button>
+        <button onclick="trocarNoticia(-1)">⏫ Notícia Seguinte</button>
+        <button onclick="proximoPortal()">🌐 Ir para Outro Portal</button>
+        <button class="btn-ai" onclick="resumirComGemini()">🤖 Resumir com IA</button>
+        <button class="btn-telegram" onclick="enviarDiretoTelegram()">🚀 Postar Direto no Canal</button>
       </div>
     </div>
 
@@ -282,31 +239,27 @@
     let urlImagemAtual = null;
 
     window.onload = () => {
-      const fontesSalvas = localStorage.getItem('yg_fontes_custom');
-      fontes = fontesSalvas ? JSON.parse(fontesSalvas) : FONTES_PADRAO;
+      try {
+        const fontesSalvas = localStorage.getItem('yg_fontes_custom');
+        fontes = fontesSalvas ? JSON.parse(fontesSalvas) : FONTES_PADRAO;
 
-      atualizarSelectPortais();
-      renderizarTabelaPortais();
+        atualizarSelectPortais();
+        renderizarTabelaPortais();
 
-      document.getElementById('botToken').value = localStorage.getItem('yg_bot_token') || "";
-      document.getElementById('chatId').value = localStorage.getItem('yg_chat_id') || "@YggdrasilNoticias";
-      document.getElementById('geminiKey').value = localStorage.getItem('yg_gemini_key') || "";
+        document.getElementById('botToken').value = localStorage.getItem('yg_bot_token') || "";
+        document.getElementById('chatId').value = localStorage.getItem('yg_chat_id') || "@YggdrasilNoticias";
+        document.getElementById('geminiKey').value = localStorage.getItem('yg_gemini_key') || "";
 
-      carregarFonteAtual();
+        carregarFonteAtual();
+      } catch (e) {
+        console.error("Erro na inicialização:", e);
+      }
     };
 
-    function mudarAba(aba) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-      if (aba === 'postador') {
-        document.querySelectorAll('.tab-btn')[0].classList.add('active');
-        document.getElementById('aba-postador').classList.add('active');
-      } else {
-        document.querySelectorAll('.tab-btn')[1].classList.add('active');
-        document.getElementById('aba-portais').classList.add('active');
-        renderizarTabelaPortais();
-      }
+    function salvarConfiguracoes() {
+      localStorage.setItem('yg_bot_token', document.getElementById('botToken').value);
+      localStorage.setItem('yg_chat_id', document.getElementById('chatId').value);
+      localStorage.setItem('yg_gemini_key', document.getElementById('geminiKey').value);
     }
 
     function salvarFontesLocal() {
@@ -385,12 +338,6 @@
         alert("Histórico limpo!");
         carregarFonteAtual();
       }
-    }
-
-    function salvarConfiguracoes() {
-      localStorage.setItem('yg_bot_token', document.getElementById('botToken').value);
-      localStorage.setItem('yg_chat_id', document.getElementById('chatId').value);
-      localStorage.setItem('yg_gemini_key', document.getElementById('geminiKey').value);
     }
 
     function obterFonteAtual() {
@@ -551,3 +498,30 @@
 
           const res = await fetch(endpoint, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.ok) sucesso = true;
+        } catch (e) {
+          console.log("Falha no envio da imagem, tentando texto apenas...");
+        }
+      }
+
+      // 2. Fallback: Enviar apenas texto com prévia habilitada caso a foto falhe
+      if (!sucesso) {
+        try {
+          const endpoint = `https://api.telegram.org/bot${botToken}/sendMessage`;
+          const payload = { chat_id: chatId, text: texto, parse_mode: 'HTML', disable_web_page_preview: false };
+
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.ok) sucesso = true;
+          else throw new Error(data.description || "Erro no Telegram");
+        } catch (err) {
+          document.getElementById('statusGlobal').innerText = "❌ Erro ao enviar: " + err.message;
+          alert("Erro ao publicar: " + err.messag
