@@ -3,7 +3,7 @@ import json
 import urllib.request
 import xml.etree.ElementTree as ET
 
-BOT_TOKEN = "8800685064:AAGpIhEDvQHR_2LTv8VKRQlAXcpkfRgHNu0"
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = "@YggdrasilNoticias"
 
 PORTAIS = [
@@ -35,6 +35,9 @@ def salvar_historico(historico):
         print(f"Aviso historico: {e}")
 
 def enviar_telegram(texto):
+    if not BOT_TOKEN:
+        print("❌ BOT_TOKEN não encontrado.")
+        return False
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = json.dumps({
         "chat_id": CHAT_ID,
