@@ -1,146 +1,117 @@
-import hashlib
-import json
 import os
-import re
-from datetime import datetime, timezone
-from pathlib import Path
-
+import json
+import time
 import feedparser
 import requests
+from dotenv import load_dotenv
 
-DATA = Path("data")
-FEEDS_FILE = DATA / "fontes.json"
-SEEN_FILE = DATA / "publicados.json"
-STATUS_FILE = DATA / "status.json"
+# Carrega variáveis de ambiente do arquivo .env local
+load_dotenv()
 
-TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "@YggdrasilNoticias")
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.7-flash")
-MAX_POSTS = int(os.environ.get("MAX_POSTS_PER_RUN", "1"))
+# CONFIGURAÇÕES DE API (Lidas estritamente do arquivo .env local)
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
-def clean_html(text):
-    text = re.sub(r"<[^>]+>", " ", text or "")
-    return re.sub(r"\s+", " ", text).strip()
+# ARQUIVOS DE DADOS LOCAIS
+PATH_FONTES = "data/fontes.json"
+PATH_PUBLICADOS = "data/publicados.json"
+PATH_STATUS = "data/status.json"
 
-def make_id(link, title):
-    return hashlib.sha256((link or title).encode("utf-8")).hexdigest()
+# CONFIGURAÇÕES DE TEMPO (em segundos)
+INTERVALO_ENTRE_PORTAIS = 1800  # 30 minutos entre envios de portais diferentes
+INTERVALO_CHECAGEM_GERAL = 900  # 15 minutos de pausa ao concluir um ciclo completo
 
-def load_feeds():
-    try:
-        raw = json.loads(FEEDS_FILE.read_text(encoding="utf-8"))
-        return [x for x in raw if x.get("active", True) and x.get("url") and x.get("name")]
-    except Exception as e:
-        print(f"Erro lendo fontes.json: {e}")
-        return []
-
-def load_seen():
-    if not SEEN_FILE.exists():
-        return set()
-    try:
-        return set(json.loads(SEEN_FILE.read_text(encoding="utf-8")))
-    except Exception:
-        return set()
-
-def save_seen(seen):
-    DATA.mkdir(exist_ok=True)
-    SEEN_FILE.write_text(json.dumps(list(seen)[-3000:], ensure_ascii=False, indent=2), encoding="utf-8")
-
-def summarize(title, description):
-    if not GEMINI_KEY:
-        return description[:600] if description else "Confira a notícia completa no portal de origem."
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-    prompt = (
-        "Você é editor de um canal brasileiro de notícias sobre anime, mangá e cultura pop. "
-        "Faça um resumo jornalístico, claro e atraente, em no máximo 3 frases. "
-        "Não invente informações.\n\n"
-        f"Título: {title}\nContexto: {description}"
-    )
-    try:
-        r = requests.post(url, params={"key": GEMINI_KEY},
-                          json={"contents":[{"parts":[{"text":prompt}]}]}, timeout=45)
-        r.raise_for_status()
-        return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-    except Exception as e:
-        print(f"Gemini falhou: {e}")
-        return description[:600] if description else "Confira a notícia completa no portal de origem."
-
-def hashtags(title, source):
-    stop={"com","para","uma","como","sobre","mais","pela","pelo","nesta","neste","este","esta","seus","suas"}
-    words=re.sub(r"[^a-zA-Z0-9À-ÿ ]","",title).split()
-    tags=["#"+w for w in words if len(w)>3 and w.lower() not in stop][:3]
-    tags += ["#"+re.sub(r"\s+","",source), "#YggdrasilNoticias"]
-    return " ".join(dict.fromkeys(tags))
-
-def format_post(item, summary):
-    return (
-        "📜 Portal YGGDRASIL\n\n"
-        f"📌 *{item['title']}*\n\n"
-        f"{summary}\n\n"
-        f"🔗 [Quer saber mais? Leia a matéria completa.]({item['link']})\n\n"
-        f"✍️ Créditos ao portal: {item['source']}\n\n"
-        "---\n🤝 Faça parte do nosso grupo!\n"
-        f"{hashtags(item['title'], item['source'])}"
-    )
-
-def send_telegram(text):
-    r=requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-        json={"chat_id":CHAT_ID,"text":text,"parse_mode":"Markdown","disable_web_page_preview":False},
-        timeout=30)
-    r.raise_for_status()
-    if not r.json().get("ok"):
-        raise RuntimeError(r.json())
-
-def fetch_news():
-    all_items=[]
-    for feed in load_feeds():
+def carregar_json(caminho, padrao):
+    if os.path.exists(caminho):
         try:
-            parsed=feedparser.parse(feed["url"])
-            if getattr(parsed,"bozo",False):
-                print(f"Aviso RSS: {feed['name']}: {getattr(parsed,'bozo_exception','erro desconhecido')}")
-            for entry in parsed.entries[:15]:
-                link=entry.get("link","")
-                title=clean_html(entry.get("title",""))
-                if not title or not link: continue
-                description=clean_html(entry.get("summary",entry.get("description","")))
-                published=entry.get("published",entry.get("updated",""))
-                all_items.append({"id":make_id(link,title),"title":title,"link":link,
-                                  "description":description,"published":published,
-                                  "source":feed["name"]})
+            with open(caminho, "r", encoding="utf-8") as f:
+                return json.load(f)
         except Exception as e:
-            print(f"Falha no feed {feed['name']}: {e}")
-    return all_items
+            print(f"✖ Erro ao ler {caminho}: {e}")
+    return padrao
 
-def write_status(message, posts):
-    STATUS_FILE.write_text(json.dumps({
-        "last_run":datetime.now(timezone.utc).isoformat(),
-        "message":message,"last_posts":posts
-    },ensure_ascii=False,indent=2),encoding="utf-8")
+def salvar_json(caminho, dados):
+    os.makedirs(os.path.dirname(caminho), exist_ok=True)
+    with open(caminho, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=2)
 
-def main():
-    DATA.mkdir(exist_ok=True)
-    feeds=load_feeds()
-    if not feeds:
-        write_status("Nenhuma fonte ativa configurada.", [])
+def enviar_telegram(mensagem):
+    if not TELEGRAM_TOKEN or not CHAT_ID:
+        print("⚠ Token do Telegram ou CHAT_ID não configurados no arquivo .env!")
+        return False
+        
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": mensagem,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": False
+    }
+    try:
+        res = requests.post(url, json=payload, timeout=10)
+        return res.status_code == 200
+    except Exception as e:
+        print(f"✖ Erro ao conectar com API do Telegram: {e}")
+        return False
+
+def processar_ciclo():
+    fontes = carregar_json(PATH_FONTES, [])
+    publicados = carregar_json(PATH_PUBLICADOS, [])
+    
+    if not fontes:
+        print("⚠ Nenhuma fonte encontrada em data/fontes.json.")
         return
-    seen=load_seen()
-    candidates=fetch_news()
-    new_items=[x for x in candidates if x["id"] not in seen][:MAX_POSTS]
-    if not new_items:
-        write_status("Sistema ativo — nenhuma notícia nova encontrada.", [])
-        print("Nenhuma notícia nova.")
-        return
-    published=[]
-    for item in new_items:
+
+    print("\n🔄 Iniciando verificação dos portais...")
+
+    for portal in fontes:
+        nome_portal = portal.get("nome", "Portal Sem Nome")
+        url_feed = portal.get("url")
+
+        if not url_feed:
+            continue
+
+        print(f"\n📡 Lendo: {nome_portal}")
         try:
-            send_telegram(format_post(item,summarize(item["title"],item["description"])))
-            seen.add(item["id"]); published.append(item)
-            print("Publicado:",item["title"])
+            feed = feedparser.parse(url_feed)
         except Exception as e:
-            print(f"Erro ao publicar {item['title']}: {e}")
-    save_seen(seen)
-    write_status(f"Sistema ativo — {len(published)} notícia(s) publicada(s) nesta execução.",published)
+            print(f"✖ Falha ao ler feed de {nome_portal}: {e}")
+            continue
 
-if __name__=="__main__":
-    main()
+        noticia_enviada_neste_portal = False
+
+        for entry in feed.entries:
+            link = entry.get("link")
+            titulo = entry.get("title")
+
+            if not link or link in publicados:
+                continue
+
+            # Monta a mensagem formatada
+            mensagem = f"<b>{titulo}</b>\n\nFonte: {nome_portal}\n🔗 {link}"
+            
+            print(f"🚀 Enviando notícia: {titulo}")
+            if enviar_telegram(mensagem):
+                publicados.append(link)
+                salvar_json(PATH_PUBLICADOS, publicados)
+                noticia_enviada_neste_portal = True
+                break  # Envia apenas 1 notícia por portal por ciclo para manter o rodízio
+            else:
+                print(f"✖ Falha no envio da notícia: {titulo}")
+
+        # Se enviou uma notícia, aguarda 30 minutos antes de passar para o próximo portal
+        if noticia_enviada_neste_portal:
+            print(f"⏳ Aguardando {INTERVALO_ENTRE_PORTAIS // 60} minutos antes do próximo portal...")
+            time.sleep(INTERVALO_ENTRE_PORTAIS)
+
+    # Atualiza o timestamp do último ciclo no arquivo de status
+    salvar_json(PATH_STATUS, {"ultimo_ciclo": time.strftime("%Y-%m-%d %H:%M:%S")})
+
+if __name__ == "__main__":
+    print("🤖 Bot Yggdrasil Notícias iniciado com sucesso!")
+    while True:
+        processar_ciclo()
+        print(f"\n💤 Ciclo finalizado. Checagem geral em {INTERVALO_CHECAGEM_GERAL // 60} minutos...")
+        time.sleep(INTERVALO_CHECAGEM_GERAL)
+	
+
