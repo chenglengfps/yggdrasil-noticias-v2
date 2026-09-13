@@ -19,4 +19,6 @@ jobs:
           python-version: '3.x'
 
       - name: Executar Bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: python bot_autorespost.py
