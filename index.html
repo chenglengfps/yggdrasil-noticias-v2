@@ -149,13 +149,13 @@
       <h3>⚙️ Configurações & Portais</h3>
 
       <label for="botToken">Token do Bot Telegram:</label>
-      <input type="password" id="botToken" placeholder="Insira seu Bot Token" onchange="salvarConfiguracoes()">
+      <input type="password" id="botToken" placeholder="Insira seu Bot Token" onkeyup="salvarConfiguracoes()">
 
       <label for="chatId">ID ou Username do Canal Telegram:</label>
-      <input type="text" id="chatId" value="@YggdrasilNoticias" onchange="salvarConfiguracoes()">
+      <input type="text" id="chatId" value="@YggdrasilNoticias" onkeyup="salvarConfiguracoes()">
 
       <label for="geminiKey">API Key do Gemini (Para Resumo IA):</label>
-      <input type="password" id="geminiKey" placeholder="Insira sua chave API do Gemini" onchange="salvarConfiguracoes()">
+      <input type="password" id="geminiKey" placeholder="Insira sua chave API do Gemini" onkeyup="salvarConfiguracoes()">
 
       <label for="selectFonte">Selecionar Portal Atual:</label>
       <div class="flex-row">
@@ -166,7 +166,7 @@
       <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
 
       <label style="font-weight: bold; color: var(--accent-color);">➕ Cadastrar Novo Portal RSS:</label>
-      <input type="text" id="novoNomePortal" placeholder="Nome do Portal (ex: Crunchyroll)">
+      <input type="text" id="novoNomePortal" placeholder="Nome do Portal (ex: AnimesX)">
       <input type="text" id="novaUrlPortal" placeholder="URL do Feed RSS (https://...)">
       <label>Modo de Postagem:</label>
       <select id="novoModoPortal">
@@ -175,7 +175,7 @@
       </select>
       <button class="btn-add" onclick="adicionarNovoPortal()">➕ Adicionar Portal</button>
 
-      <button class="btn-reset" onclick="acaoRestaurarPadroes()">🔄 Restaurar Portais Padrão</button>
+      <button class="btn-reset" onclick="forcarRestaurarPortais()">🔄 Forçar Restauração dos Portais</button>
       <button class="btn-danger" onclick="limparHistoricoPostados()">🗑️ Limpar Histórico de Postados</button>
     </div>
 
@@ -226,7 +226,7 @@
   </div>
 
   <script>
-    const listaInicialPortais = [
+    var portaisPadrao = [
       { id: 'jbox', nome: 'JBox', url: 'https://www.jbox.com.br/feed/', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
       { id: 'ovicio', nome: 'O Vício', url: 'https://ovicio.com.br/category/animes/feed/', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
       { id: 'animeunited', nome: 'Anime United', url: 'https://www.animeunited.com.br/feed/', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' },
@@ -235,34 +235,37 @@
       { id: 'legiaodosherois', nome: 'Legião dos Heróis', url: 'https://www.legiaodosherois.com.br/feed', modo: 'Manual', escaneado: 'Nunca', postado: 'Nunca' }
     ];
 
-    let fontes = [];
-    let itemsAtuais = [];
-    let indexAtual = 0;
-    let urlImagemAtual = null;
+    var fontes = [];
+    var itemsAtuais = [];
+    var indexAtual = 0;
+    var urlImagemAtual = null;
 
-    window.onload = () => {
-      try {
-        const fontesSalvas = localStorage.getItem('yg_fontes_custom');
-        if (fontesSalvas) {
-          const parsed = JSON.parse(fontesSalvas);
-          fontes = (parsed && parsed.length > 0) ? parsed : listaInicialPortais;
-        } else {
-          fontes = Array.from(listaInicialPortais);
-        }
-
-        salvarFontesLocal();
-
-        document.getElementById('botToken').value = localStorage.getItem('yg_bot_token') || "";
-        document.getElementById('chatId').value = localStorage.getItem('yg_chat_id') || "@YggdrasilNoticias";
-        document.getElementById('geminiKey').value = localStorage.getItem('yg_gemini_key') || "";
-
-        carregarFonteAtual();
-      } catch (e) {
-        console.error("Erro na inicialização:", e);
-        fontes = Array.from(listaInicialPortais);
-        salvarFontesLocal();
-      }
+    window.onload = function() {
+      inicializarSistema();
     };
+
+    function inicializarSistema() {
+      try {
+        var fontesSalvas = localStorage.getItem('yg_fontes_v3');
+        if (fontesSalvas && JSON.parse(fontesSalvas).length > 0) {
+          fontes = JSON.parse(fontesSalvas);
+        } else {
+          fontes = JSON.parse(JSON.stringify(portaisPadrao));
+          localStorage.setItem('yg_fontes_v3', JSON.stringify(fontes));
+        }
+      } catch (e) {
+        fontes = JSON.parse(JSON.stringify(portaisPadrao));
+      }
+
+      atualizarSelectPortais();
+      renderizarTabelaPortais();
+
+      document.getElementById('botToken').value = localStorage.getItem('yg_bot_token') || "";
+      document.getElementById('chatId').value = localStorage.getItem('yg_chat_id') || "@YggdrasilNoticias";
+      document.getElementById('geminiKey').value = localStorage.getItem('yg_gemini_key') || "";
+
+      carregarFonteAtual();
+    }
 
     function salvarConfiguracoes() {
       localStorage.setItem('yg_bot_token', document.getElementById('botToken').value);
@@ -271,66 +274,65 @@
     }
 
     function salvarFontesLocal() {
-      localStorage.setItem('yg_fontes_custom', JSON.stringify(fontes));
+      localStorage.setItem('yg_fontes_v3', JSON.stringify(fontes));
       atualizarSelectPortais();
       renderizarTabelaPortais();
     }
 
-    function acaoRestaurarPadroes() {
-      if (confirm("Deseja restaurar a lista padrão de portais?")) {
-        fontes = JSON.parse(JSON.stringify(listaInicialPortais));
-        salvarFontesLocal();
-        carregarFonteAtual();
-        alert("Portais restaurados com sucesso!");
-      }
+    function forcarRestaurarPortais() {
+      localStorage.removeItem('yg_fontes_v3');
+      localStorage.removeItem('yg_fontes_custom');
+      fontes = JSON.parse(JSON.stringify(portaisPadrao));
+      salvarFontesLocal();
+      carregarFonteAtual();
+      alert("✅ Portais restaurados com sucesso!");
     }
 
     function atualizarSelectPortais() {
-      const select = document.getElementById('selectFonte');
+      var select = document.getElementById('selectFonte');
       select.innerHTML = '';
-      fontes.forEach((f, idx) => {
-        let opt = document.createElement('option');
-        opt.value = idx;
-        opt.innerText = f.nome;
+      for (var i = 0; i < fontes.length; i++) {
+        var opt = document.createElement('option');
+        opt.value = i;
+        opt.innerText = fontes[i].nome;
         select.appendChild(opt);
-      });
+      }
     }
 
     function renderizarTabelaPortais() {
-      const tbody = document.getElementById('tabelaPortaisBody');
+      var tbody = document.getElementById('tabelaPortaisBody');
       tbody.innerHTML = '';
-      fontes.forEach(f => {
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><b>${f.nome}</b></td>
-          <td><span style="color:${f.modo === 'Automático' ? '#2ecc71' : '#f1c40f'}">${f.modo || 'Manual'}</span></td>
-          <td>${f.escaneado || 'Nunca'}</td>
-          <td>${f.postado || 'Nunca'}</td>
-        `;
+      for (var i = 0; i < fontes.length; i++) {
+        var f = fontes[i];
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td><b>' + f.nome + '</b></td>' +
+                       '<td><span style="color:' + (f.modo === 'Automático' ? '#2ecc71' : '#f1c40f') + '">' + (f.modo || 'Manual') + '</span></td>' +
+                       '<td>' + (f.escaneado || 'Nunca') + '</td>' +
+                       '<td>' + (f.postado || 'Nunca') + '</td>';
         tbody.appendChild(tr);
-      });
+      }
     }
 
     function adicionarNovoPortal() {
-      const nome = document.getElementById('novoNomePortal').value.trim();
-      const url = document.getElementById('novaUrlPortal').value.trim();
-      const modo = document.getElementById('novoModoPortal').value;
+      var nome = document.getElementById('novoNomePortal').value.trim();
+      var url = document.getElementById('novaUrlPortal').value.trim();
+      var modo = document.getElementById('novoModoPortal').value;
 
       if (!nome || !url) return alert('Preencha o nome e a URL.');
 
-      fontes.push({ id: 'custom_' + Date.now(), nome, url, modo, escaneado: 'Nunca', postado: 'Nunca' });
+      fontes.push({ id: 'custom_' + Date.now(), nome: nome, url: url, modo: modo, escaneado: 'Nunca', postado: 'Nunca' });
       salvarFontesLocal();
 
       document.getElementById('novoNomePortal').value = '';
       document.getElementById('novaUrlPortal').value = '';
-      alert(`Portal "${nome}" cadastrado com sucesso!`);
+      alert('Portal "' + nome + '" cadastrado!');
     }
 
     function removerPortalAtual() {
       if (fontes.length <= 1) return alert('Você precisa manter pelo menos um portal.');
-      const idx = document.getElementById('selectFonte').value;
+      var idx = document.getElementById('selectFonte').value;
 
-      if (confirm(`Remover portal "${fontes[idx].nome}"?`)) {
+      if (confirm('Remover portal "' + fontes[idx].nome + '"?')) {
         fontes.splice(idx, 1);
         salvarFontesLocal();
         carregarFonteAtual();
@@ -338,11 +340,15 @@
     }
 
     function obterNoticiasPostadas() {
-      return JSON.parse(localStorage.getItem('yg_postados') || '[]');
+      try {
+        return JSON.parse(localStorage.getItem('yg_postados') || '[]');
+      } catch (e) {
+        return [];
+      }
     }
 
     function salvarNoticiaPostada(link) {
-      let postados = obterNoticiasPostadas();
+      var postados = obterNoticiasPostadas();
       if (!postados.includes(link)) {
         postados.push(link);
         localStorage.setItem('yg_postados', JSON.stringify(postados));
@@ -358,31 +364,31 @@
     }
 
     function obterFonteAtual() {
-      const idx = document.getElementById('selectFonte').value;
-      return fontes[idx];
+      var idx = document.getElementById('selectFonte').value;
+      return fontes[idx] || fontes[0];
     }
 
     async function carregarFonteAtual() {
       if (!fontes || fontes.length === 0) return;
-      const idx = document.getElementById('selectFonte').value;
-      const fonte = fontes[idx];
+      var idx = document.getElementById('selectFonte').value || 0;
+      var fonte = fontes[idx];
 
       document.getElementById('nomePortal').innerText = fonte.nome;
       document.getElementById('tituloNoticia').innerText = "Carregando notícias...";
-      document.getElementById('statusGlobal').innerText = `Buscando dados de ${fonte.nome}...`;
+      document.getElementById('statusGlobal').innerText = "Buscando dados de " + fonte.nome + "...";
 
-      const agora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var agora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       fontes[idx].escaneado = agora;
       salvarFontesLocal();
 
       try {
-        const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(fonte.url)}`;
-        const res = await fetch(apiUrl);
-        const data = await res.json();
+        var apiUrl = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(fonte.url);
+        var res = await fetch(apiUrl);
+        var data = await res.json();
 
         if (data.status === 'ok' && data.items.length > 0) {
-          const postados = obterNoticiasPostadas();
-          itemsAtuais = data.items.filter(item => !postados.includes(item.link));
+          var postados = obterNoticiasPostadas();
+          itemsAtuais = data.items.filter(function(item) { return !postados.includes(item.link); });
 
           if (itemsAtuais.length === 0) {
             document.getElementById('tituloNoticia').innerText = "🎉 Nenhuma notícia pendente neste portal!";
@@ -410,20 +416,20 @@
     function extrairImagem(item) {
       if (item.thumbnail) return item.thumbnail;
       if (item.enclosure && item.enclosure.link) return item.enclosure.link;
-      const match = (item.content || item.description || "").match(/<img[^>]+src=["']([^"']+)["']/i);
+      var match = (item.content || item.description || "").match(/<img[^>]+src=["']([^"']+)["']/i);
       return match ? match[1] : null;
     }
 
     function atualizarUI() {
       if (itemsAtuais.length === 0) return;
-      const item = itemsAtuais[indexAtual];
-      const fonte = obterFonteAtual();
+      var item = itemsAtuais[indexAtual];
+      var fonte = obterFonteAtual();
 
-      document.getElementById('indexNoticia').innerText = `${indexAtual + 1}/${itemsAtuais.length}`;
+      document.getElementById('indexNoticia').innerText = (indexAtual + 1) + '/' + itemsAtuais.length;
       document.getElementById('tituloNoticia').innerText = item.title;
 
       urlImagemAtual = extrairImagem(item);
-      const imgElement = document.getElementById('imagemNoticia');
+      var imgElement = document.getElementById('imagemNoticia');
       if (urlImagemAtual) {
         imgElement.src = urlImagemAtual;
         imgElement.style.display = 'block';
@@ -431,11 +437,11 @@
         imgElement.style.display = 'none';
       }
 
-      let desc = (item.description || item.content || "").replace(/<[^>]*>?/gm, '').trim();
+      var desc = (item.description || item.content || "").replace(/<[^>]*>?/gm, '').trim();
       if (desc.length > 600) desc = desc.substring(0, 600) + '...';
 
-      const tagFonte = '#' + fonte.nome.replace(/\s+/g, '');
-      const hashtags = `#YggdrasilNoticias #YggdrasilAnimes #Geek #Otaku ${tagFonte}`;
+      var tagFonte = '#' + fonte.nome.replace(/\s+/g, '');
+      var hashtags = `#YggdrasilNoticias #YggdrasilAnimes #Geek #Otaku ${tagFonte}`;
 
       document.getElementById('textoPost').value = `🗞️ <b>PORTAL YGGDRASIL | ${fonte.nome}</b>\n\n🔥 <b>${item.title}</b>\n\n${desc}\n\n📖 Quer saber mais? <a href="${item.link}">Leia a matéria completa no site!</a>\n\n💡 <i>Créditos ao portal ${fonte.nome}</i>\n───\n🌳 Faça parte do nosso canal principal: @YggdrasilAnimes\n\n${hashtags}`;
     }
@@ -451,36 +457,36 @@
     function trocarPortal() { carregarFonteAtual(); }
 
     function proximoPortal() {
-      const select = document.getElementById('selectFonte');
+      var select = document.getElementById('selectFonte');
       select.value = (parseInt(select.value) + 1) % fontes.length;
       carregarFonteAtual();
     }
 
     async function resumirComGemini() {
       salvarConfiguracoes();
-      const apiKey = document.getElementById('geminiKey').value.trim();
+      var apiKey = document.getElementById('geminiKey').value.trim();
       if (!apiKey) return alert('Insira a sua chave do Gemini.');
 
-      const item = itemsAtuais[indexAtual];
+      var item = itemsAtuais[indexAtual];
       if (!item) return;
 
       document.getElementById('textoPost').value = "Gerando resumo via IA Gemini...";
 
       try {
-        const prompt = `Faça um resumo atrativo para leitores geek/otaku sobre a notícia: "${item.title}". Resumo: "${item.description.replace(/<[^>]*>?/gm, '')}"`;
+        var prompt = `Faça um resumo atrativo para leitores geek/otaku sobre a notícia: "${item.title}". Resumo: "${item.description.replace(/<[^>]*>?/gm, '')}"`;
         
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        var response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
 
-        const data = await response.json();
+        var data = await response.json();
         if (data.candidates && data.candidates[0].content) {
-          const resumo = data.candidates[0].content.parts[0].text.trim();
-          const fonte = obterFonteAtual();
-          const tagFonte = '#' + fonte.nome.replace(/\s+/g, '');
-          const hashtags = `#YggdrasilNoticias #YggdrasilAnimes #Geek #Otaku ${tagFonte}`;
+          var resumo = data.candidates[0].content.parts[0].text.trim();
+          var fonte = obterFonteAtual();
+          var tagFonte = '#' + fonte.nome.replace(/\s+/g, '');
+          var hashtags = `#YggdrasilNoticias #YggdrasilAnimes #Geek #Otaku ${tagFonte}`;
           
           document.getElementById('textoPost').value = `🗞️ <b>PORTAL YGGDRASIL | ${fonte.nome}</b>\n\n🔥 <b>${item.title}</b>\n\n${resumo}\n\n📖 Quer saber mais? <a href="${item.link}">Leia a matéria completa no site!</a>\n\n💡 <i>Créditos ao portal ${fonte.nome}</i>\n───\n🌳 Faça parte do nosso canal principal: @YggdrasilAnimes\n\n${hashtags}`;
         } else {
@@ -495,38 +501,33 @@
     async function enviarDiretoTelegram() {
       salvarConfiguracoes();
 
-      const botToken = document.getElementById('botToken').value.trim();
-      const chatId = document.getElementById('chatId').value.trim();
-      const texto = document.getElementById('textoPost').value;
-      const idx = document.getElementById('selectFonte').value;
-      const itemAtual = itemsAtuais[indexAtual];
+      var botToken = document.getElementById('botToken').value.trim();
+      var chatId = document.getElementById('chatId').value.trim();
+      var texto = document.getElementById('textoPost').value;
+      var idx = document.getElementById('selectFonte').value;
+      var itemAtual = itemsAtuais[indexAtual];
 
       if (!botToken) return alert('Por favor, digite o Token do Bot.');
 
       document.getElementById('statusGlobal').innerText = "Enviando para o Telegram...";
 
-      let sucesso = false;
+      var sucesso = false;
 
-      // 1. Tentar Enviar com Foto
       if (urlImagemAtual) {
         try {
-          const endpoint = `https://api.telegram.org/bot${botToken}/sendPhoto`;
-          const payload = { chat_id: chatId, photo: urlImagemAtual, caption: texto, parse_mode: 'HTML' };
+          var endpoint = `https://api.telegram.org/bot${botToken}/sendPhoto`;
+          var payload = { chat_id: chatId, photo: urlImagemAtual, caption: texto, parse_mode: 'HTML' };
 
-          const res = await fetch(endpoint, {
+          var res = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
-          const data = await res.json();
+          var data = await res.json();
           if (data.ok) sucesso = true;
-        } catch (e) {
-          console.log("Falha no envio da imagem, tentando texto apenas...");
-        }
+        } catch (e) {}
       }
 
-      // 2. Fallback: Enviar apenas texto
       if (!sucesso) {
         try {
-          const endpoint = `https://api.telegram.org/bot${botToken}/sendMessage`;
-          const payload = { chat_id: chatId, text: text
+          var endpoint = `https://api.telegram.org/bot${botToken}/send
