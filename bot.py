@@ -1,117 +1,78 @@
-import os
-import json
-import time
-import feedparser
-import requests
-from dotenv import load_dotenv
-
-# Carrega variáveis de ambiente do arquivo .env local
-load_dotenv()
-
-# CONFIGURAÇÕES DE API (Lidas estritamente do arquivo .env local)
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
-
-# ARQUIVOS DE DADOS LOCAIS
-PATH_FONTES = "data/fontes.json"
-PATH_PUBLICADOS = "data/publicados.json"
-PATH_STATUS = "data/status.json"
-
-# CONFIGURAÇÕES DE TEMPO (em segundos)
-INTERVALO_ENTRE_PORTAIS = 1800  # 30 minutos entre envios de portais diferentes
-INTERVALO_CHECAGEM_GERAL = 900  # 15 minutos de pausa ao concluir um ciclo completo
-
-def carregar_json(caminho, padrao):
-    if os.path.exists(caminho):
-        try:
-            with open(caminho, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"✖ Erro ao ler {caminho}: {e}")
-    return padrao
-
-def salvar_json(caminho, dados):
-    os.makedirs(os.path.dirname(caminho), exist_ok=True)
-    with open(caminho, "w", encoding="utf-8") as f:
-        json.dump(dados, f, ensure_ascii=False, indent=2)
-
-def enviar_telegram(mensagem):
-    if not TELEGRAM_TOKEN or not CHAT_ID:
-        print("⚠ Token do Telegram ou CHAT_ID não configurados no arquivo .env!")
-        return False
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Yggdrasil Notícias</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { text-align: center; color: #4CAF50; }
+        .info-box { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #4CAF50; }
+        .portal-card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
+        .portal-name { font-size: 1.1em; font-weight: bold; color: #64B5F6; margin-bottom: 5px; }
+        .previa-box { background: #2a2a2a; padding: 10px; border-radius: 5px; font-size: 0.9em; margin: 10px 0; color: #ccc; }
+        .btn-enviar { background-color: #FF9800; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; }
+        .btn-enviar:hover { background-color: #e68a00; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Yggdrasil Notícias v2</h1>
         
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": mensagem,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": False
-    }
-    try:
-        res = requests.post(url, json=payload, timeout=10)
-        return res.status_code == 200
-    except Exception as e:
-        print(f"✖ Erro ao conectar com API do Telegram: {e}")
-        return False
+        <div class="info-box">
+            <p><strong>Status do Bot:</strong> Ativo</p>
+            <p><strong>Intervalo de envio:</strong> 30 minutos entre portais</p>
+        </div>
 
-def processar_ciclo():
-    fontes = carregar_json(PATH_FONTES, [])
-    publicados = carregar_json(PATH_PUBLICADOS, [])
-    
-    if not fontes:
-        print("⚠ Nenhuma fonte encontrada em data/fontes.json.")
-        return
+        <h2>Portais Cadastrados</h2>
+        <div id="lista-portais">Carregando portais...</div>
+    </div>
 
-    print("\n🔄 Iniciando verificação dos portais...")
+    <script>
+        async function carregarPortais() {
+            try {
+                const res = await fetch('data/fontes.json');
+                const portais = await res.json();
+                const container = document.getElementById('lista-portais');
+                container.innerHTML = '';
 
-    for portal in fontes:
-        nome_portal = portal.get("nome", "Portal Sem Nome")
-        url_feed = portal.get("url")
+                portais.forEach((portal, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'portal-card';
+                    card.innerHTML = `
+                        <div class="portal-name">${portal.nome}</div>
+                        <div class="previa-box" id="previa-${index}">Buscando última notícia...</div>
+                        <button class="btn-enviar" onclick="enviarTeste('${portal.url}', ${index})">🚀 Enviar Agora (Teste)</button>
+                    `;
+                    container.appendChild(card);
+                    carregarPrevia(portal.url, index);
+                });
+            } catch (e) {
+                document.getElementById('lista-portais').innerText = 'Erro ao carregar fontes.json';
+            }
+        }
 
-        if not url_feed:
-            continue
+        async function carregarPrevia(feedUrl, index) {
+            try {
+                const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`);
+                const data = await res.json();
+                if (data.items && data.items.length > 0) {
+                    document.getElementById(`previa-${index}`).innerText = "Última: " + data.items[0].title;
+                } else {
+                    document.getElementById(`previa-${index}`).innerText = "Nenhuma notícia recente no feed.";
+                }
+            } catch (e) {
+                document.getElementById(`previa-${index}`).innerText = "Não foi possível carregar a prévia.";
+            }
+        }
 
-        print(f"\n📡 Lendo: {nome_portal}")
-        try:
-            feed = feedparser.parse(url_feed)
-        except Exception as e:
-            print(f"✖ Falha ao ler feed de {nome_portal}: {e}")
-            continue
+        function enviarTeste(feedUrl, index) {
+            alert(`Solicitação de envio enviada para o portal #${index + 1}! O bot processará a notícia no próximo ciclo.`);
+        }
 
-        noticia_enviada_neste_portal = False
-
-        for entry in feed.entries:
-            link = entry.get("link")
-            titulo = entry.get("title")
-
-            if not link or link in publicados:
-                continue
-
-            # Monta a mensagem formatada
-            mensagem = f"<b>{titulo}</b>\n\nFonte: {nome_portal}\n🔗 {link}"
-            
-            print(f"🚀 Enviando notícia: {titulo}")
-            if enviar_telegram(mensagem):
-                publicados.append(link)
-                salvar_json(PATH_PUBLICADOS, publicados)
-                noticia_enviada_neste_portal = True
-                break  # Envia apenas 1 notícia por portal por ciclo para manter o rodízio
-            else:
-                print(f"✖ Falha no envio da notícia: {titulo}")
-
-        # Se enviou uma notícia, aguarda 30 minutos antes de passar para o próximo portal
-        if noticia_enviada_neste_portal:
-            print(f"⏳ Aguardando {INTERVALO_ENTRE_PORTAIS // 60} minutos antes do próximo portal...")
-            time.sleep(INTERVALO_ENTRE_PORTAIS)
-
-    # Atualiza o timestamp do último ciclo no arquivo de status
-    salvar_json(PATH_STATUS, {"ultimo_ciclo": time.strftime("%Y-%m-%d %H:%M:%S")})
-
-if __name__ == "__main__":
-    print("🤖 Bot Yggdrasil Notícias iniciado com sucesso!")
-    while True:
-        processar_ciclo()
-        print(f"\n💤 Ciclo finalizado. Checagem geral em {INTERVALO_CHECAGEM_GERAL // 60} minutos...")
-        time.sleep(INTERVALO_CHECAGEM_GERAL)
-	
+        carregarPortais();
+    </script>
+</body>
+</html>
 
