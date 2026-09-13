@@ -36,8 +36,8 @@ def salvar_historico(historico):
 
 def enviar_telegram(texto):
     if not BOT_TOKEN:
-        print("❌ BOT_TOKEN não encontrado nas variáveis de ambiente.")
-        return False
+        raise ValueError("BOT_TOKEN nao foi encontrado nas variaveis de ambiente!")
+    
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = json.dumps({
         "chat_id": CHAT_ID,
@@ -51,7 +51,7 @@ def enviar_telegram(texto):
         with urllib.request.urlopen(req) as resp:
             return resp.status == 200
     except Exception as e:
-        print(f"❌ Erro Telegram: {e}")
+        print(f"Erro Telegram: {e}")
         return False
 
 def processar_feeds():
@@ -59,7 +59,10 @@ def processar_feeds():
 
     for portal in PORTAIS:
         try:
-            req = urllib.request.Request(portal["url"], headers={"User-Agent": "Mozilla/5.0"})
+            nome_portal = portal["nome"]
+            url_portal = portal["url"]
+
+            req = urllib.request.Request(url_portal, headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(req, timeout=15) as response:
                 xml_data = response.read()
                 root = ET.fromstring(xml_data)
@@ -75,33 +78,23 @@ def processar_feeds():
                     titulo = title_elem.text.strip() if title_elem is not None and title_elem.text else ""
 
                     if link and link not in historico:
-                        tag_fonte = "#" + portal["nome"].replace(" ", "")
+                        tag_fonte = "#" + nome_portal.replace(" ", "")
                         msg = (
-                            f"🗞️ <b>PORTAL YGGDRASIL | {portal['nome']}</b>
-
-"
-                            f"🔥 <b>{titulo}</b>
-
-"
-                            f"📖 Quer saber mais? <a href='{link}'>Leia a matéria completa no site!</a>
-
-"
-                            f"💡 <i>Créditos ao portal {portal['nome']}</i>
-───
-"
-                            f"🌳 Faça parte do nosso canal principal: @YggdrasilAnimes
-
-"
-                            f"#YggdrasilNoticias #YggdrasilAnimes #Geek #Otaku {tag_fonte}"
+                            "🗞️ <b>PORTAL YGGDRASIL | " + nome_portal + "</b>\n\n" +
+                            "🔥 <b>" + titulo + "</b>\n\n" +
+                            "📖 Quer saber mais? <a href='" + link + "'>Leia a matéria completa no site!</a>\n\n" +
+                            "💡 <i>Créditos ao portal " + nome_portal + "</i>\n───\n" +
+                            "🌳 Faça parte do nosso canal principal: @YggdrasilAnimes\n\n" +
+                            "#YggdrasilNoticias #YggdrasilAnimes #Geek #Otaku " + tag_fonte
                         )
 
                         if enviar_telegram(msg):
-                            print(f"✅ Postado: {titulo}")
+                            print(f"Postado: {titulo}")
                             historico.append(link)
                             salvar_historico(historico)
                             return
         except Exception as e:
-            print(f"⚠️ Erro portal {portal['nome']}: {e}")
+            print(f"Erro portal {portal['nome']}: {e}")
 
 if __name__ == "__main__":
     processar_feeds()
