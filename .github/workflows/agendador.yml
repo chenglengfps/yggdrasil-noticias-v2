@@ -1,0 +1,33 @@
+name: Automação Yggdrasil 24h
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Executar Bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: "@YggdrasilNoticias"
+        run: python bot_autorespost.py
+
+      - name: Salvar histórico
+        run: |
+          git config --global user.name "Yggdrasil Bot"
+          git config --global user.email "bot@yggdrasil.com"
+          git add postados.json
+          git commit -m "Atualiza postados.json [skip ci]" || exit 0
+          git push
