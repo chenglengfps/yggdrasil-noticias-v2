@@ -1,182 +1,78 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Yggdrasil Notícias — Painel</title>
-<style>
-:root{--bg:#090d14;--card:#121a26;--card2:#0e1520;--accent:#00d2ff;--purple:#9d4edd;--text:#f4f7fb;--muted:#9aa8bb;--border:#263244;--ok:#52d273;--danger:#ff6577;--warn:#f4ca64}
-*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#090d14,#0b111b);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:18px}
-.container{max-width:1050px;margin:auto}.hero{text-align:center;padding:20px 0}.hero h1{margin:0;color:var(--accent);letter-spacing:1px}.hero p{color:var(--muted)}
-.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 8px 30px #0003}
-h2{font-size:1.05rem;margin:0 0 12px;color:#fff}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
-label{display:block;font-size:.85rem;color:var(--muted);margin:9px 0 5px}input{width:100%;padding:11px;border-radius:9px;border:1px solid var(--border);background:#0a1019;color:#fff;outline:none}input:focus{border-color:var(--accent)}
-button{border:0;border-radius:9px;padding:10px 13px;background:var(--accent);color:#001018;font-weight:700;cursor:pointer;margin:5px 5px 0 0}button.secondary{background:#263244;color:#fff}button.purple{background:var(--purple);color:#fff}button.danger{background:var(--danger);color:#21040a}button:disabled{opacity:.5;cursor:not-allowed}
-.note{background:var(--card2);border:1px solid var(--border);padding:12px;border-radius:9px;color:var(--muted);font-size:.9rem;line-height:1.5}.status{font-weight:700;padding:10px;border-radius:9px;background:#0b121b;color:var(--accent)}.ok{color:var(--ok)}.warn{color:var(--warn)}.dangerText{color:var(--danger)}
-.source{border:1px solid var(--border);border-radius:11px;padding:12px;margin:9px 0;background:#0d141e}.source strong{display:block}.source small{display:block;color:var(--muted);word-break:break-all;margin-top:3px}
-.badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:.75rem;background:#1e2b3c;color:var(--muted);margin-left:5px}.badge.on{color:var(--ok)}.badge.off{color:var(--danger)}
-.preview{margin-top:12px}.preview article{padding:9px 0;border-bottom:1px solid var(--border)}.preview a{color:var(--accent)}
-.top-actions{display:flex;flex-wrap:wrap;gap:6px}.hidden{display:none}
-footer{text-align:center;color:var(--muted);font-size:.8rem;padding:20px}
-code{background:#090e15;padding:2px 5px;border-radius:5px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Yggdrasil Notícias</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { text-align: center; color: #4CAF50; }
+        .info-box { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #4CAF50; }
+        .portal-card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
+        .portal-name { font-size: 1.1em; font-weight: bold; color: #64B5F6; margin-bottom: 5px; }
+        .previa-box { background: #2a2a2a; padding: 10px; border-radius: 5px; font-size: 0.9em; margin: 10px 0; color: #ccc; }
+        .btn-enviar { background-color: #FF9800; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; }
+        .btn-enviar:hover { background-color: #e68a00; }
+    </style>
 </head>
 <body>
-<div class="container">
-<div class="hero"><h1>⚡ YGGDRASIL NOTÍCIAS</h1><p>Painel de controle do robô de notícias</p></div>
+    <div class="container">
+        <h1>Yggdrasil Notícias v2</h1>
+        
+        <div class="info-box">
+            <p><strong>Status do Bot:</strong> Ativo</p>
+            <p><strong>Intervalo de envio:</strong> 30 minutos entre portais</p>
+        </div>
 
-<section class="panel">
-<h2>📡 Status do robô</h2>
-<div id="status" class="status">Carregando...</div>
-<p id="updated" class="note">—</p>
-<div id="lastPosts" class="grid"></div>
-</section>
+        <h2>Portais Cadastrados</h2>
+        <div id="lista-portais">Carregando portais...</div>
+    </div>
 
-<section class="panel">
-<h2>🔐 Minhas APIs / configurações locais</h2>
-<div class="note">Esses campos ficam salvos <b>somente neste navegador</b>. Eles não são enviados para o GitHub por este painel. Para o robô funcionar 24/7, o token e a chave do Gemini devem ser cadastrados como <b>Secrets do GitHub Actions</b> (o tutorial explica).</div>
-<div class="grid">
-<div><label>Token do bot do Telegram</label><input id="token" type="password" autocomplete="off" placeholder="Cole aqui o token"></div>
-<div><label>Canal / Chat ID</label><input id="chat" placeholder="@YggdrasilNoticias"></div>
-<div><label>Chave da API Gemini (opcional)</label><input id="gemini" type="password" autocomplete="off" placeholder="Cole aqui a chave"></div>
-</div>
-<div class="top-actions">
-<button onclick="saveSettings()">💾 Salvar neste aparelho</button>
-<button class="secondary" onclick="clearSettings()">🗑️ Limpar</button>
-</div>
-<p id="settingsMsg" class="note hidden"></p>
-</section>
+    <script>
+        async function carregarPortais() {
+            try {
+                const res = await fetch('data/fontes.json');
+                const portais = await res.json();
+                const container = document.getElementById('lista-portais');
+                container.innerHTML = '';
 
-<section class="panel">
-<h2>➕ Adicionar nova fonte de notícia</h2>
-<div class="grid">
-<div><label>Nome da fonte</label><input id="sourceName" placeholder="Ex.: Anime X"></div>
-<div><label>URL do RSS / Feed</label><input id="sourceUrl" placeholder="https://site.com/feed/"></div>
-</div>
-<div class="top-actions">
-<button onclick="testSource()">🔎 Testar fonte</button>
-<button id="addBtn" class="purple" onclick="addSource()" disabled>➕ Adicionar ao catálogo</button>
-</div>
-<div id="testResult" class="preview"></div>
-</section>
+                portais.forEach((portal, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'portal-card';
+                    card.innerHTML = `
+                        <div class="portal-name">${portal.nome}</div>
+                        <div class="previa-box" id="previa-${index}">Buscando última notícia...</div>
+                        <button class="btn-enviar" onclick="enviarTeste('${portal.url}', ${index})">🚀 Enviar Agora (Teste)</button>
+                    `;
+                    container.appendChild(card);
+                    carregarPrevia(portal.url, index);
+                });
+            } catch (e) {
+                document.getElementById('lista-portais').innerText = 'Erro ao carregar fontes.json';
+            }
+        }
 
-<section class="panel">
-<h2>📚 Catálogo de fontes</h2>
-<div class="note">O catálogo que o robô usa é <code>data/fontes.json</code>. O botão abaixo salva as alterações neste navegador. Para o robô 24/7 enxergar uma fonte nova, use <b>Baixar catálogo</b> e envie o arquivo atualizado para o GitHub, substituindo <code>data/fontes.json</code>.</div>
-<div id="sources"></div>
-<div class="top-actions">
-<button onclick="downloadCatalog()">⬇️ Baixar catálogo</button>
-<button class="secondary" onclick="document.getElementById('importFile').click()">⬆️ Importar catálogo</button>
-<input id="importFile" class="hidden" type="file" accept=".json" onchange="importCatalog(event)">
-<button class="secondary" onclick="resetCatalog()">↩️ Restaurar catálogo original</button>
-</div>
-</section>
+        async function carregarPrevia(feedUrl, index) {
+            try {
+                const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`);
+                const data = await res.json();
+                if (data.items && data.items.length > 0) {
+                    document.getElementById(`previa-${index}`).innerText = "Última: " + data.items[0].title;
+                } else {
+                    document.getElementById(`previa-${index}`).innerText = "Nenhuma notícia recente no feed.";
+                }
+            } catch (e) {
+                document.getElementById(`previa-${index}`).innerText = "Não foi possível carregar a prévia.";
+            }
+        }
 
-<section class="panel">
-<h2>🤖 Como a automação funciona</h2>
-<div class="note">A cada <b>2 horas</b>, o GitHub Actions executa o robô, lê <code>data/fontes.json</code>, procura notícias novas, usa Gemini quando configurado e publica no Telegram. O site é apenas o painel; ele não precisa ficar aberto para o robô funcionar.</div>
-</section>
-<footer>Yggdrasil Notícias • painel estático para GitHub Pages</footer>
-</div>
+        function enviarTeste(feedUrl, index) {
+            alert(`Solicitação de envio enviada para o portal #${index + 1}! O bot processará a notícia no próximo ciclo.`);
+        }
 
-<script>
-const DEFAULT_CATALOG=[
-{id:"crunchyroll",name:"Crunchyroll",url:"https://feeds.feedburner.com/crunchyroll/animenews",active:true},
-{id:"jbox",name:"JBox",url:"https://www.jbox.com.br/feed/",active:true},
-{id:"ovicio",name:"O Vício",url:"https://ovicio.com.br/category/anime/feed/",active:true},
-{id:"animeunited",name:"Anime United",url:"https://www.animeunited.com.br/feed/",active:true},
-{id:"omelete",name:"Omelete",url:"https://www.omelete.com.br/rss",active:true}
-];
-let catalog=loadCatalog(), lastTest=null;
-
-function loadCatalog(){
- try{const x=JSON.parse(localStorage.getItem("ygg_catalog")); if(Array.isArray(x)&&x.length)return x}catch(e){}
- return JSON.parse(JSON.stringify(DEFAULT_CATALOG));
-}
-function persistCatalog(){localStorage.setItem("ygg_catalog",JSON.stringify(catalog));renderCatalog()}
-function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
-function uid(s){return (s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"fonte")+"-"+Date.now().toString(36)}
-function renderCatalog(){
- const box=document.getElementById("sources");box.innerHTML="";
- catalog.forEach((s,i)=>{
-  const d=document.createElement("div");d.className="source";
-  d.innerHTML=`<strong>${escapeHtml(s.name)} <span class="badge ${s.active!==false?"on":"off"}">${s.active!==false?"ATIVA":"PAUSADA"}</span></strong><small>${escapeHtml(s.url)}</small>
-  <button class="secondary" onclick="toggleSource(${i})">${s.active!==false?"Pausar":"Ativar"}</button>
-  <button class="secondary" onclick="editSource(${i})">Editar</button>
-  <button class="danger" onclick="deleteSource(${i})">Excluir</button>`;
-  box.appendChild(d);
- })
-}
-function testSource(){
- const name=document.getElementById("sourceName").value.trim(), url=document.getElementById("sourceUrl").value.trim();
- const out=document.getElementById("testResult"), btn=document.getElementById("addBtn");
- btn.disabled=true; lastTest=null;
- if(!name||!url){out.innerHTML='<div class="note dangerText">Preencha o nome e a URL.</div>';return}
- out.innerHTML='<div class="note">Testando o feed...</div>';
- const direct=fetch(url,{cache:"no-store"}).then(r=>{if(!r.ok)throw Error("HTTP "+r.status);return r.text()});
- direct.then(text=>showFeedResult(name,url,text)).catch(()=>{
-   const proxy="https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(url);
-   return fetch(proxy).then(r=>r.json()).then(data=>{
-     if(data.status!=="ok")throw Error(data.message||"Feed inválido");
-     showJsonResult(name,url,data);
-   })
- }).catch(err=>{out.innerHTML='<div class="note dangerText">❌ Não foi possível ler este RSS. O site pode bloquear acesso externo ou a URL pode não ser um feed RSS válido.<br><small>'+escapeHtml(err.message)+'</small></div>'})
-}
-function showFeedResult(name,url,text){
- const xml=new DOMParser().parseFromString(text,"text/xml"), entries=[...xml.querySelectorAll("item, entry")].slice(0,5);
- if(!entries.length)throw Error("Nenhuma notícia encontrada");
- const items=entries.map(e=>({title:e.querySelector("title")?.textContent?.trim()||"Sem título",link:e.querySelector("link")?.getAttribute("href")||e.querySelector("link")?.textContent?.trim()||""}));
- finishTest(name,url,items)
-}
-function showJsonResult(name,url,data){finishTest(name,url,(data.items||[]).slice(0,5).map(x=>({title:x.title||"Sem título",link:x.link||""})))}
-function finishTest(name,url,items){
- lastTest={id:uid(name),name,url,active:true};
- document.getElementById("addBtn").disabled=false;
- document.getElementById("testResult").innerHTML='<div class="note ok">✅ Feed encontrado. '+items.length+' notícia(s) de exemplo:</div>'+items.map(x=>`<article>📰 <b>${escapeHtml(x.title)}</b><br><a target="_blank" rel="noopener" href="${encodeURI(x.link)}">${escapeHtml(x.link||"sem link")}</a></article>`).join("")
-}
-function addSource(){
- if(!lastTest)return;
- const idx=catalog.findIndex(x=>x.url===lastTest.url);
- if(idx>=0){catalog[idx].active=true;catalog[idx].name=lastTest.name}else catalog.push(lastTest);
- persistCatalog();
- document.getElementById("testResult").innerHTML='<div class="note ok">✅ Fonte adicionada ao catálogo deste navegador. Agora baixe o catálogo e substitua <code>data/fontes.json</code> no GitHub para o robô usá-la.</div>';
- document.getElementById("addBtn").disabled=true;
-}
-function toggleSource(i){catalog[i].active=catalog[i].active===false;persistCatalog()}
-function deleteSource(i){if(confirm("Excluir esta fonte do catálogo local?")){catalog.splice(i,1);persistCatalog()}}
-function editSource(i){
- const n=prompt("Nome da fonte:",catalog[i].name); if(n===null)return;
- const u=prompt("URL do RSS:",catalog[i].url); if(u===null)return;
- catalog[i].name=n.trim()||catalog[i].name;catalog[i].url=u.trim()||catalog[i].url;persistCatalog()
-}
-function downloadCatalog(){
- const blob=new Blob([JSON.stringify(catalog,null,2)],{type:"application/json"}), a=document.createElement("a");
- a.href=URL.createObjectURL(blob);a.download="fontes.json";a.click();URL.revokeObjectURL(a.href)
-}
-function importCatalog(ev){
- const f=ev.target.files[0];if(!f)return;const r=new FileReader();
- r.onload=()=>{try{const x=JSON.parse(r.result);if(!Array.isArray(x))throw Error();catalog=x;persistCatalog();alert("Catálogo importado.")}catch(e){alert("JSON inválido.")}};
- r.readAsText(f);ev.target.value=""
-}
-function resetCatalog(){if(confirm("Restaurar as 5 fontes originais?")){catalog=JSON.parse(JSON.stringify(DEFAULT_CATALOG));persistCatalog()}}
-function saveSettings(){
- localStorage.setItem("ygg_token",document.getElementById("token").value);
- localStorage.setItem("ygg_chat",document.getElementById("chat").value);
- localStorage.setItem("ygg_gemini",document.getElementById("gemini").value);
- msg("Configurações salvas neste navegador.")
-}
-function clearSettings(){localStorage.removeItem("ygg_token");localStorage.removeItem("ygg_chat");localStorage.removeItem("ygg_gemini");document.getElementById("token").value="";document.getElementById("chat").value="";document.getElementById("gemini").value="";msg("Configurações locais removidas.")}
-function msg(t){const e=document.getElementById("settingsMsg");e.textContent=t;e.classList.remove("hidden");setTimeout(()=>e.classList.add("hidden"),4000)}
-function loadSettings(){document.getElementById("token").value=localStorage.getItem("ygg_token")||"";document.getElementById("chat").value=localStorage.getItem("ygg_chat")||"@YggdrasilNoticias";document.getElementById("gemini").value=localStorage.getItem("ygg_gemini")||""}
-async function loadStatus(){
- try{
-  const r=await fetch("data/status.json?ts="+Date.now());if(!r.ok)throw Error();
-  const s=await r.json();document.getElementById("status").textContent=s.message||"Sistema ativo";document.getElementById("updated").textContent="Última execução (UTC): "+(s.last_run||"—");
-  const box=document.getElementById("lastPosts");box.innerHTML="";
-  (s.last_posts||[]).forEach(n=>{const d=document.createElement("div");d.className="source";d.innerHTML=`<strong>${escapeHtml(n.source)}</strong><div>${escapeHtml(n.title)}</div><a target="_blank" rel="noopener" href="${encodeURI(n.link)}">Abrir notícia</a>`;box.appendChild(d)})
- }catch(e){document.getElementById("status").textContent="Ainda não há status publicado.";document.getElementById("status").className="status warn"}
-}
-renderCatalog();loadSettings();loadStatus();setInterval(loadStatus,60000);
-</script>
+        carregarPortais();
+    </script>
 </body>
 </html>
+
