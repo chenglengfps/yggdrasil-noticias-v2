@@ -52,7 +52,6 @@ def salvar_historico_github(historico):
         f.write(conteudo_json)
 
     if not GH_PAT:
-        print("Aviso: GH_PAT nao configurado.")
         return
 
     url = f"https://api.github.com/repos/{REPO}/contents/{HISTORICO_FILE}"
@@ -94,7 +93,21 @@ def otimizar_url_imagem(url):
 
     return url
 
-def extrair_imagem_item(item):
+def extrair_og_image(url_pagina):
+    try:
+        req = urllib.request.Request(url_pagina, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            html = response.read().decode("utf-8", errors="ignore")
+            match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+            if not match:
+                match = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', html, re.IGNORECASE)
+            if match:
+                return match.group(1)
+    except Exception:
+        pass
+    return None
+
+def extrair_imagem_item(item, link_materia=""):
     url_encontrada = None
 
     for elem in item.iter():
@@ -125,6 +138,9 @@ def extrair_imagem_item(item):
             if match:
                 url_encontrada = match.group(1)
 
+    if not url_encontrada and link_materia:
+        url_encontrada = extrair_og_image(link_materia)
+
     return otimizar_url_imagem(url_encontrada)
 
 def enviar_telegram(texto, url_imagem=None):
@@ -146,7 +162,7 @@ def enviar_telegram(texto, url_imagem=None):
             "chat_id": CHAT_ID,
             "text": texto,
             "parse_mode": "HTML",
-            "disable_web_page_preview": False
+            "link_preview_options": {"is_disabled": True}
         }
 
     payload = json.dumps(payload_dict).encode("utf-8")
@@ -187,7 +203,7 @@ def processar_feeds():
 
                     if link and (link not in historico) and (titulo not in historico):
                         tag_fonte = "#" + nome_portal.replace(" ", "")
-                        url_imagem = extrair_imagem_item(item)
+                        url_imagem = extrair_imagem_item(item, link_materia=link)
 
                         msg = (
                             "🗞️ <b>PORTAL YGGDRASIL | " + nome_portal + "</b>\n\n" +
