@@ -198,21 +198,11 @@ def processar_feeds():
                         url_imagem = extrair_imagem_item(item)
 
                         msg = (
-                            "🗞️ <b>PORTAL YGGDRASIL | " + nome_portal + "</b>
-
-" +
-                            "🔥 <b>" + titulo + "</b>
-
-" +
-                            "📖 Quer saber mais? <a href='" + link + "'>Leia a matéria completa no site!</a>
-
-" +
-                            "💡 <i>Créditos ao portal " + nome_portal + "</i>
-───
-" +
-                            "🌳 Faça parte do nosso canal principal: @YggdrasilAnimes
-
-" +
+                            "🗞️ <b>PORTAL YGGDRASIL | " + nome_portal + "</b>\n\n" +
+                            "🔥 <b>" + titulo + "</b>\n\n" +
+                            "📖 Quer saber mais? <a href='" + link + "'>Leia a matéria completa no site!</a>\n\n" +
+                            "💡 <i>Créditos ao portal " + nome_portal + "</i>\n───\n" +
+                            "🌳 Faça parte do nosso canal principal: @YggdrasilAnimes\n\n" +
                             "#YggdrasilNoticias #YggdrasilAnimes #Geek #Otaku " + tag_fonte
                         )
 
