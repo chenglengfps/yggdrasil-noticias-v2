@@ -2,11 +2,17 @@ name: Yggdrasil Notícias
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    # Executa a cada 1 hora e meia (intervalo de 90 minutos)
+    - cron: '0 0,3,6,9,12,15,18,21 * * *'
+    - cron: '30 1,4,7,10,13,16,19,22 * * *'
   workflow_dispatch:
   push:
     branches:
       - main
+
+concurrency:
+  group: yggdrasil-publicar
+  cancel-in-progress: true
 
 jobs:
   publicar:
