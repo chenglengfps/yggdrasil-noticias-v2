@@ -21,4 +21,5 @@ jobs:
       - name: Executar Bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: python bot_autorespost.py
