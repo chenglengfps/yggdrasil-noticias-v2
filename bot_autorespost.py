@@ -92,7 +92,7 @@ def otimizar_url_imagem(url):
     url = re.sub(r'/w\d+-h\d+(-[a-z0-9]+)?/', '/s1600/', url)
 
     # Remove sufixos de miniatura do WordPress (ex: imagem-150x150.jpg -> imagem.jpg)
-    url = re.sub(r'-\d+x\d+(\.(jpg|jpeg|png|webp))', r'', url, flags=re.IGNORECASE)
+    url = re.sub(r'-\d+x\d+(\.(jpg|jpeg|png|webp))', r'\1', url, flags=re.IGNORECASE)
 
     # Remove parametros de corte Jetpack/Photon (ex: ?resize=150%2C150 ou ?fit=)
     url = re.sub(r'\?(resize|fit|strip|quality)=[^&]+', '', url)
@@ -102,7 +102,6 @@ def otimizar_url_imagem(url):
 def extrair_imagem_item(item):
     url_encontrada = None
 
-    # 1. Busca por media:content ou enclosure (versao original)
     for elem in item.iter():
         if elem.tag.endswith("content"):
             url = elem.attrib.get("url")
@@ -116,7 +115,6 @@ def extrair_imagem_item(item):
                 url_encontrada = url
                 break
 
-    # 2. Se nao achou, busca thumbnail
     if not url_encontrada:
         for elem in item.iter():
             if elem.tag.endswith("thumbnail"):
@@ -125,11 +123,10 @@ def extrair_imagem_item(item):
                     url_encontrada = url
                     break
 
-    # 3. Tenta extrair tag <img> do HTML da descricao
     if not url_encontrada:
         desc = item.find("description")
         if desc is not None and desc.text:
-            match = re.search(r'<img [^>]*src=["']([^"']+)["']', desc.text)
+            match = re.search(r'<img [^>]*src=["\']([^"\']+)["\']', desc.text)
             if match:
                 url_encontrada = match.group(1)
 
