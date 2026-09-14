@@ -11,13 +11,28 @@ REPO = os.getenv("GITHUB_REPOSITORY", "chenglengfps/yggdrasil-noticias-v2")
 CHAT_ID = "@YggdrasilNoticias"
 
 PORTAIS = [
-    {"nome": "JBox", "url": "https://www.jbox.com.br/feed/"},
-    {"nome": "O Vício", "url": "https://ovicio.com.br/category/animes/feed/"},
-    {"nome": "Anime United", "url": "https://www.animeunited.com.br/feed/"},
-    {"nome": "IGN Brasil", "url": "https://br.ign.com/feed.xml"},
+    {"nome": "Voxel", "url": "https://www.tecmundo.com.br/jogos/rss"},
+    {"nome": "Arkade", "url": "https://www.arkade.com.br/feed/"},
+    {"nome": "GameBlast", "url": "https://www.gameblast.com.br/feeds/posts/default?alt=rss"},
+    {"nome": "Meio Bit Games", "url": "https://meiobit.com/categoria/games/feed/"},
+    {"nome": "Adrenaline", "url": "https://www.adrenaline.com.br/feed/"},
+    {"nome": "MeuPlayStation", "url": "https://meuplaystation.com.br/feed/"},
+    {"nome": "Windows Club", "url": "https://www.windowsclub.com.br/feed/"},
+    {"nome": "Nintendo Blast", "url": "https://www.nintendoblast.com.br/feeds/posts/default?alt=rss"},
+    {"nome": "The Enemy", "url": "https://www.theenemy.com.br/rss/feed"},
     {"nome": "Flow Games", "url": "https://flowgames.gg/feed/"},
-    {"nome": "Legião dos Heróis", "url": "https://www.legiaodosherois.com.br/feed"},
-    {"nome": "TechTudo Games", "url": "https://techtudo.com.br/rss/techtudo/jogos/"}
+    {"nome": "TechTudo Games", "url": "https://techtudo.com.br/rss/techtudo/jogos/"},
+    {"nome": "Crunchyroll", "url": "https://www.crunchyroll.com/news/rss"},
+    {"nome": "JBox", "url": "https://www.jbox.com.br/feed/"},
+    {"nome": "Anime United", "url": "https://www.animeunited.com.br/feed/"},
+    {"nome": "Otaku PT", "url": "https://www.otakupt.com/feed/"},
+    {"nome": "Jovem Nerd", "url": "https://jovemnerd.com.br/feed/"},
+    {"nome": "O Vício", "url": "https://ovicio.com.br/feed/"},
+    {"nome": "Legião dos Heróis", "url": "https://www.legiaodosherois.com.br/feed/"},
+    {"nome": "Garotas Geeks", "url": "https://www.garotasgeeks.com/feed/"},
+    {"nome": "Nerdizmo", "url": "https://nerdizmo.com.br/feed/"},
+    {"nome": "Combo Infinito", "url": "https://comboinfinito.com.br/principal/feed/"},
+    {"nome": "IGN Brasil", "url": "https://br.ign.com/feed.xml"}
 ]
 
 HISTORICO_FILE = "postados.json"
@@ -69,7 +84,6 @@ def salvar_historico_github(historico):
         print(f"⚠️ Erro ao salvar historico: {e}")
 
 def extrair_imagem_item(item):
-    # 1. Tenta media:content / media:thumbnail
     for elem in item.iter():
         if elem.tag.endswith("content") or elem.tag.endswith("thumbnail"):
             url = elem.attrib.get("url")
@@ -81,7 +95,6 @@ def extrair_imagem_item(item):
             if url and ("image" in type_attr or "http" in url):
                 return url
 
-    # 2. Tenta extrair src de tag <img> dentro da descricao
     desc = item.find("description")
     if desc is not None and desc.text:
         match = re.search(r'<img [^>]*src=["\']([^"\']+)["\']', desc.text)
@@ -119,7 +132,6 @@ def enviar_telegram(texto, url_imagem=None):
             return resp.status == 200
     except Exception as e:
         print(f"Erro ao enviar pelo Telegram (Photo={bool(url_imagem)}): {e}")
-        # Se falhou enviando foto, tenta como texto simples
         if url_imagem:
             return enviar_telegram(texto, url_imagem=None)
         return False
