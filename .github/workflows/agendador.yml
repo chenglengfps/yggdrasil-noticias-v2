@@ -1,16 +1,19 @@
-name: Automação Yggdrasil 24h
+name: Yggdrasil Notícias
 
 on:
   schedule:
     - cron: '*/30 * * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   publicar:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Baixar repositorio
+      - name: Baixar codigo
         uses: actions/checkout@v4
 
       - name: Configurar Python
@@ -18,7 +21,7 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Executar Bot
+      - name: Executar robo
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           GH_PAT: ${{ secrets.GH_PAT }}
