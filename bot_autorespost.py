@@ -87,14 +87,9 @@ def otimizar_url_imagem(url):
     if not url:
         return None
 
-    # Remove padroes de miniatura do Blogger / GameBlast / Google
     url = re.sub(r'/s\d+(-c)?/', '/s1600/', url)
     url = re.sub(r'/w\d+-h\d+(-[a-z0-9]+)?/', '/s1600/', url)
-
-    # Remove sufixos de miniatura do WordPress (ex: imagem-150x150.jpg -> imagem.jpg)
     url = re.sub(r'-\d+x\d+(\.(jpg|jpeg|png|webp))', r'\1', url, flags=re.IGNORECASE)
-
-    # Remove parametros de corte Jetpack/Photon (ex: ?resize=150%2C150 ou ?fit=)
     url = re.sub(r'\?(resize|fit|strip|quality)=[^&]+', '', url)
 
     return url
