@@ -83,25 +83,57 @@ def salvar_historico_github(historico):
     except Exception as e:
         print(f"⚠️ Erro ao salvar historico: {e}")
 
+def otimizar_url_imagem(url):
+    if not url:
+        return None
+
+    # Remove padroes de miniatura do Blogger / GameBlast / Google
+    url = re.sub(r'/s\d+(-c)?/', '/s1600/', url)
+    url = re.sub(r'/w\d+-h\d+(-[a-z0-9]+)?/', '/s1600/', url)
+
+    # Remove sufixos de miniatura do WordPress (ex: imagem-150x150.jpg -> imagem.jpg)
+    url = re.sub(r'-\d+x\d+(\.(jpg|jpeg|png|webp))', r'', url, flags=re.IGNORECASE)
+
+    # Remove parametros de corte Jetpack/Photon (ex: ?resize=150%2C150 ou ?fit=)
+    url = re.sub(r'\?(resize|fit|strip|quality)=[^&]+', '', url)
+
+    return url
+
 def extrair_imagem_item(item):
+    url_encontrada = None
+
+    # 1. Busca por media:content ou enclosure (versao original)
     for elem in item.iter():
-        if elem.tag.endswith("content") or elem.tag.endswith("thumbnail"):
+        if elem.tag.endswith("content"):
             url = elem.attrib.get("url")
             if url and ("http" in url):
-                return url
+                url_encontrada = url
+                break
         if elem.tag.endswith("enclosure"):
             url = elem.attrib.get("url")
             type_attr = elem.attrib.get("type", "")
             if url and ("image" in type_attr or "http" in url):
-                return url
+                url_encontrada = url
+                break
 
-    desc = item.find("description")
-    if desc is not None and desc.text:
-        match = re.search(r'<img [^>]*src=["\']([^"\']+)["\']', desc.text)
-        if match:
-            return match.group(1)
+    # 2. Se nao achou, busca thumbnail
+    if not url_encontrada:
+        for elem in item.iter():
+            if elem.tag.endswith("thumbnail"):
+                url = elem.attrib.get("url")
+                if url and ("http" in url):
+                    url_encontrada = url
+                    break
 
-    return None
+    # 3. Tenta extrair tag <img> do HTML da descricao
+    if not url_encontrada:
+        desc = item.find("description")
+        if desc is not None and desc.text:
+            match = re.search(r'<img [^>]*src=["']([^"']+)["']', desc.text)
+            if match:
+                url_encontrada = match.group(1)
+
+    return otimizar_url_imagem(url_encontrada)
 
 def enviar_telegram(texto, url_imagem=None):
     if not BOT_TOKEN:
@@ -166,11 +198,21 @@ def processar_feeds():
                         url_imagem = extrair_imagem_item(item)
 
                         msg = (
-                            "🗞️ <b>PORTAL YGGDRASIL | " + nome_portal + "</b>\n\n" +
-                            "🔥 <b>" + titulo + "</b>\n\n" +
-                            "📖 Quer saber mais? <a href='" + link + "'>Leia a matéria completa no site!</a>\n\n" +
-                            "💡 <i>Créditos ao portal " + nome_portal + "</i>\n───\n" +
-                            "🌳 Faça parte do nosso canal principal: @YggdrasilAnimes\n\n" +
+                            "🗞️ <b>PORTAL YGGDRASIL | " + nome_portal + "</b>
+
+" +
+                            "🔥 <b>" + titulo + "</b>
+
+" +
+                            "📖 Quer saber mais? <a href='" + link + "'>Leia a matéria completa no site!</a>
+
+" +
+                            "💡 <i>Créditos ao portal " + nome_portal + "</i>
+───
+" +
+                            "🌳 Faça parte do nosso canal principal: @YggdrasilAnimes
+
+" +
                             "#YggdrasilNoticias #YggdrasilAnimes #Geek #Otaku " + tag_fonte
                         )
 
